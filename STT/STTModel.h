@@ -46,8 +46,8 @@ Speech To Text Method is optional method when used the delegate, which passes th
  @param outputFlacFile Name of Output Flac file.
  @return conversionResult Returns boolen expression if the file got successfully converted or not.
  */
-- (BOOL)convertWaveToFlac:(NSString*) inputWaveFile
-           OutputFileName:(NSString*)outputFlacFile;
+- (BOOL)convertWaveFileToFlac:(NSString*)inputWaveFile
+               OutputFileName:(NSString*)outputFlacFile;
 
 /** 
  STTFromGoogle Method converts the flac file and returns the converted text as dictionary using Google's Api.

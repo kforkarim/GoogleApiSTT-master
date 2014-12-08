@@ -8,10 +8,16 @@
 
 #import "STTModel.h"
 #include "wav_to_flac.h"
-#import "STTController.h"
 
 //Url for Google Speech-To-Text Api.
-NSString *googleSTT = @"https://www.google.com/speech-api/v1/recognize?xjerr=1&client=chromium&lang=en-US&maxresults=10&pfilter=0";
+static const NSString *key = @"AIzaSyCvPg2ZH3i7p14g1WytA7wGH52D8DawLEM";
+static const NSString *url = @"https://www.google.com/speech-api/v2/recognize?output=json&lang=en-us&key=";
+
+
+//Max results URL
+//static NSString *googleSTT = @"https://www.google.com/speech-api/v1/recognize?xjerr=1&client=chromium&lang=en-US&maxresults=10&pfilter=0";
+
+//Results in Arabic
 //NSString *googleSTT = @"https://www.google.com/speech-api/v1/recognize?xjerr=1&client=chromium&lang=ar";
 
 @implementation STTModel
@@ -22,22 +28,30 @@ NSString *googleSTT = @"https://www.google.com/speech-api/v1/recognize?xjerr=1&c
     
     self = [super init];
     if (self) {
-
+        
         
     }
     return self;
 }
 
-- (void)dealloc {
-    
-}
-
-- (BOOL)convertWaveToFlac:(NSString*) inputWaveFile
-           OutputFileName:(NSString*)outputFlacFile {
+- (BOOL)convertWaveFileToFlac:(NSString*)inputWaveFile
+               OutputFileName:(NSString*)outputFlacFile
+{
     
     //Input file
-    NSString *waveFile = [NSString stringWithFormat:@"%@/%@",[self applicationDocumentDirectory], inputWaveFile];
-    NSLog(@"waveFile %@", waveFile);
+    NSArray* stringComponents = [inputWaveFile componentsSeparatedByString:@"."];
+    NSLog(@"%@",[stringComponents description]);
+    
+    NSString *lossyWaveFile;
+    
+    if ([stringComponents count] > 0) {
+        //If reading the file from documents directory, then use nsbundle
+        lossyWaveFile = [[NSBundle mainBundle] pathForResource:[stringComponents objectAtIndex:0] ofType:[stringComponents objectAtIndex:1]];
+    }
+    
+    //If recording and storing in documents directory, use the below lossyWaveFile format.
+    //NSString *lossyWaveFile = [NSString stringWithFormat:@"%@/%@",[self applicationDocumentDirectory], inputWaveFile];
+    NSLog(@"waveFile %@", lossyWaveFile);
     //Output file
     //Check if output File exists
     if (![self fileExistsInDocumentFolder:outputFlacFile]) {
@@ -53,13 +67,17 @@ NSString *googleSTT = @"https://www.google.com/speech-api/v1/recognize?xjerr=1&c
     NSString *flacFile = [NSString stringWithFormat:@"%@/%@",[self applicationDocumentDirectory], outputFlacFile];
     
     
-    NSLog(@"%@",[waveFile description]);
+    NSLog(@"%@",[lossyWaveFile description]);
     NSLog(@"%@",[flacFile description]);
     
-    const char *wave_file = [waveFile UTF8String];
+    const char *wav_file = [lossyWaveFile UTF8String];
     const char *flac_file = [flacFile UTF8String];
-
-    int conversionResult = convertWavToFlac(wave_file, flac_file);
+    
+    NSLog(@"%s",wav_file);
+    NSLog(@"The size of a char is: %lu.", sizeof(wav_file));
+    NSLog(@"The size of a char is: %lu.", sizeof(flac_file));
+    
+    int conversionResult = convertWavToFlac(wav_file, flac_file);
     
     NSLog(@"%i",conversionResult);
     
@@ -69,36 +87,39 @@ NSString *googleSTT = @"https://www.google.com/speech-api/v1/recognize?xjerr=1&c
 
 - (void)STTFromGoogle:(NSString*)fileName {
     
+    NSString *googleSTT = [NSString stringWithFormat:@"%@%@",url,key];
     NSURL *url = [NSURL URLWithString:googleSTT];
     
     NSMutableURLRequest *request = [NSMutableURLRequest requestWithURL:url];
     
     NSString *file_Path = [NSString stringWithFormat:@"%@/%@",[self applicationDocumentDirectory], fileName];
+    NSLog(@"%@",file_Path);
     
     NSData *myData = [NSData dataWithContentsOfFile:file_Path];
-
+    NSLog(@"%@",[NSByteCountFormatter stringFromByteCount:myData.length countStyle:NSByteCountFormatterCountStyleFile]);
+    
     
     [request setHTTPMethod:@"POST"];
-    [request setValue:@"audio/x-flac; rate=16000" forHTTPHeaderField:@"Content-Type"];
+    [request setValue:@"audio/x-flac; rate=16000;" forHTTPHeaderField:@"Content-Type"];
     [request setHTTPBody:myData];
     [request setTimeoutInterval:60];
- 
+    
     [NSURLConnection sendAsynchronousRequest:request
                                        queue:[NSOperationQueue mainQueue]
                            completionHandler:^(NSURLResponse *response, NSData *data, NSError *error) {
                                
                                if (!error) {
                                    NSLog(@"%@",data);
-                                   NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:kNilOptions 
-                                                         error:&error];
+                                   NSDictionary *json = [NSJSONSerialization JSONObjectWithData:data options:kNilOptions
+                                                                                          error:&error];
                                    NSLog(@"%@",json);
                                    
                                    //[self.delegate audioConvertedToTextFromModel:json];
                                    [self.delegate speechToTextCompletion:response data:data error:error];
                                }
-                           
+                               
                            }];
-        
+    
 }
 
 - (NSString*)applicationDocumentDirectory {
@@ -106,7 +127,7 @@ NSString *googleSTT = @"https://www.google.com/speech-api/v1/recognize?xjerr=1&c
     NSArray *dirPaths;
     NSString *docsDir;
     
-    dirPaths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory, 
+    dirPaths = NSSearchPathForDirectoriesInDomains(NSDocumentDirectory,
                                                    NSUserDomainMask, YES);
     
     docsDir = [dirPaths objectAtIndex:0];
@@ -130,13 +151,13 @@ NSString *googleSTT = @"https://www.google.com/speech-api/v1/recognize?xjerr=1&c
     NSError *err;
     
     NSString *documentDirectory = [NSString stringWithFormat:@"%@/", [self applicationDocumentDirectory]];
-                                   
+    
     NSString *newfileName = [documentDirectory stringByAppendingFormat:@"%@",fileName];
-                
+    
     NSLog(@"newfileName %@", newfileName);
     //Keep it empty.
     NSString *dummyDataToWrite = @"";
-                                   
+    
     //Write to file
     NSFileManager *fileMgr = [[NSFileManager alloc] init];
     fileMgr.delegate = self;
@@ -148,7 +169,7 @@ NSString *googleSTT = @"https://www.google.com/speech-api/v1/recognize?xjerr=1&c
     NSLog(@"error %@",err);
     NSLog(@"fileResult %d",fileResult);
     return fileResult;
-                       
+    
 }
 
 @end

@@ -128,7 +128,7 @@
     if (flag) {
         
         //[STTModel convertWaveToFlac:@"newRecordTest.wav" :@"newRecordTest.flac"];
-        [self.sttModel convertWaveToFlac:@"newRecordTest.wav" OutputFileName:@"newRecordTest.flac"];
+        [self.sttModel convertWaveFileToFlac:@"newRecordTest.wav" OutputFileName:@"newRecordTest.flac"];
         [self.sttModel STTFromGoogle:[NSURL URLWithString:@"newRecordTest.flac"]];
         //NSDictionary *conversionCompleted = [STTModel STTFromGoogle:[NSURL URLWithString:@"newRecordTest.flac"]];
         //[STTControllerdelegate audioRecordingCompleted:conversionCompleted];
